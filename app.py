@@ -1,34 +1,58 @@
-import streamlit as st
-import requests
-st.title("Pumpkin Seed Classifier")
-area = st.number_input("Area")
-perimeter = st.number_input("Perimeter")
-major_axis = st.number_input("Major Axis Length")
-minor_axis = st.number_input("Minor Axis Length")
-convex_area = st.number_input("Convex Area")
-equiv_diameter = st.number_input("Equiv Diameter")
-solidity = st.number_input("Solidity")
-roundness = st.number_input("Roundness")
-compactness = st.number_input("Compactness")
-shape_factor = st.number_input("Shape Factor 1")
-if st.button("Predict"):
-    payload = {
-        "Area": area,
-        "Perimeter": perimeter,
-        "Major_Axis_Length": major_axis,
-        "Minor_Axis_Length": minor_axis,
-        "Convex_Area": convex_area,
-        "Equiv_Diameter": equiv_diameter,
-        "Solidity": solidity,
-        "Roundness": roundness,
-        "Compactness": compactness,
-        "Shape_Factor_1": shape_factor
+from fastapi import FastAPI
+from pydantic import BaseModel
+import joblib
+import numpy as np
+
+app = FastAPI()
+
+model = joblib.load("pumpkin_seeds.pkl")
+
+class PumpkinData(BaseModel):
+
+    Area: float
+    Perimeter: float
+    Major_Axis_Length: float
+    Minor_Axis_Length: float
+    Convex_Area: float
+    Equiv_Diameter: float
+    Solidity: float
+    Roundness: float
+    Compactness: float
+    Shape_Factor_1: float
+
+@app.get("/")
+def home():
+
+    return {
+        "message":"Pumpkin Seed Classifier API"
     }
-    response = requests.post(
-        "https://pumpkin-seed-mlops.onrender.com/predict",
-        json=payload
+
+@app.post("/predict")
+def predict(data: PumpkinData):
+
+    features=np.array([
+        [
+            data.Area,
+            data.Perimeter,
+            data.Major_Axis_Length,
+            data.Minor_Axis_Length,
+            data.Convex_Area,
+            data.Equiv_Diameter,
+            data.Solidity,
+            data.Roundness,
+            data.Compactness,
+            data.Shape_Factor_1
+        ]
+    ])
+
+    prediction=model.predict(features)
+
+    label = (
+        "CERCEVELIK"
+        if prediction[0]==0
+        else "URGUP_SIVRISI"
     )
-    prediction=response.json()
-    st.success(
-        prediction["prediction"]
-    )
+
+    return {
+        "prediction":label
+    }
